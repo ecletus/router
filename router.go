@@ -3,10 +3,10 @@ package router
 import (
 	"net/http"
 
-	"github.com/moisespsena/go-pluggable"
-	"github.com/moisespsena/go-route"
 	"github.com/aghape/cli"
 	"github.com/aghape/plug"
+	"github.com/moisespsena/go-pluggable"
+	"github.com/moisespsena/go-route"
 )
 
 var E_ROUTE = PREFIX + ":route"
