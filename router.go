@@ -41,9 +41,20 @@ func (p *Plugin) Init(options *plug.Options) error {
 }
 
 type Router struct {
-	Mux        *route.Mux
-	Handler    http.Handler
-	ServerAddr string
+	Mux               *route.Mux
+	Handler           http.Handler
+	ServerAddr        string
+	preServeCallbacks []func(r *Router)
+}
+
+func (r *Router) PreServe(cb ...func(r *Router)) {
+	r.preServeCallbacks = append(r.preServeCallbacks, cb...)
+}
+
+func (r *Router) preServe() {
+	for _, cb := range r.preServeCallbacks {
+		cb(r)
+	}
 }
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {

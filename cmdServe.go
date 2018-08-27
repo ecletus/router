@@ -3,9 +3,9 @@ package router
 import (
 	"net/http"
 
+	_ "github.com/aghape/session"
 	"github.com/moisespsena/go-default-logger"
 	"github.com/moisespsena/go-error-wrap"
-	_ "github.com/aghape/session"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +24,7 @@ func serveHttpCmd(router *Router, setupRoutes func(r *Router) error) *cobra.Comm
 			if len(args) > 0 && args[0] != "" {
 				addr = args[0]
 			}
+			router.preServe()
 			log.Info("Listening on", addr)
 			return http.ListenAndServe(router.ServerAddr, router)
 		},
