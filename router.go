@@ -3,10 +3,12 @@ package router
 import (
 	"net/http"
 
-	"github.com/aghape/cli"
+	"github.com/moisespsena-go/task"
+	"github.com/spf13/cobra"
+
 	"github.com/aghape/plug"
-	"github.com/moisespsena/go-pluggable"
-	"github.com/moisespsena/go-route"
+	"github.com/moisespsena-go/httpu"
+	"github.com/moisespsena-go/xroute"
 )
 
 var E_ROUTE = PREFIX + ":route"
@@ -16,65 +18,53 @@ type RouterEvent struct {
 	Router *Router
 }
 
-type Plugin struct {
-	plug.EventDispatcher
-	RouterKey  string
-	ServerAddr string
-	SingleSite bool
-}
-
-func (p *Plugin) ProvideOptions() []string {
-	return []string{p.RouterKey}
-}
-
-func (p *Plugin) Init(options *plug.Options) error {
-	if p.ServerAddr == "" {
-		p.ServerAddr = ":5000"
-	}
-	router := &Router{
-		Mux:        route.NewMux(PREFIX).LogRequests().InterseptErrors(),
-		ServerAddr: p.ServerAddr,
-	}
-
-	options.Set(p.RouterKey, router)
-	return nil
-}
-
 type Router struct {
-	Mux               *route.Mux
+	rootMux           *xroute.Mux
+	Mux               *xroute.Mux
 	Handler           http.Handler
-	ServerAddr        string
-	preServeCallbacks []func(r *Router)
+	Config            *httpu.Config
+	preServeCallbacks []func(r *Router, ta task.Appender)
+	Tasks             task.Tasks
+	Cmd               *cobra.Command
 }
 
-func (r *Router) PreServe(cb ...func(r *Router)) {
+func (r *Router) GetRootMux() *xroute.Mux {
+	if r.rootMux != nil {
+		return r.rootMux
+	}
+	return r.Mux
+}
+
+func (r *Router) RootMux(f func(mux *xroute.Mux)) {
+	if r.rootMux == nil {
+		r.rootMux = xroute.NewMux(PREFIX + ":root")
+		r.rootMux.Mount("/", r.Mux)
+	}
+	f(r.rootMux)
+}
+
+func (r *Router) PreServe(cb ...func(r *Router, ta task.Appender)) {
 	r.preServeCallbacks = append(r.preServeCallbacks, cb...)
 }
 
-func (r *Router) preServe() {
+func (r *Router) CallPreServe(ta task.Appender) {
 	for _, cb := range r.preServeCallbacks {
-		cb(r)
+		cb(r, ta)
 	}
 }
 
-func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	req = route.SetOriginalUrlIfNotSetted(req)
-	r.Handler.ServeHTTP(w, req)
-}
-
-type ServerPlugin struct {
-	pluggable.EventDispatcher
-	RouterKey string
-}
-
-func (p *ServerPlugin) OnRegister(dis plug.PluginEventDispatcherInterface) {
-	p.On(cli.E_REGISTER, func(e pluggable.PluginEventInterface) {
-		router := e.Options().GetInterface(p.RouterKey).(*Router)
-		rootCmd := e.(*cli.RegisterEvent).RootCmd
-		rootCmd.AddCommand(serveHttpCmd(router, func(r *Router) error {
-			return Trigger(dis, r)
-		}))
+func (r *Router) CreateServer() *httpu.Server {
+	srv := httpu.NewServer(r.Config, r)
+	srv.AddSetup(func(ta task.Appender) error {
+		r.CallPreServe(ta)
+		return nil
 	})
+	return srv
+}
+
+func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	req = xroute.SetOriginalURLIfNotSetted(req)
+	r.Handler.ServeHTTP(w, req)
 }
 
 func RouterEventCallback(cb func(e *RouterEvent)) func(e plug.EventInterface) {
@@ -107,10 +97,6 @@ func OnRouteE(dis plug.EventDispatcherInterface, callbacks ...func(e *RouterEven
 		}
 	}
 	return
-}
-
-func (p *ServerPlugin) RequireOptions() []string {
-	return []string{p.RouterKey}
 }
 
 func Trigger(dis plug.PluginEventDispatcherInterface, r *Router) error {
