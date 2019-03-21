@@ -6,7 +6,7 @@ import (
 	"github.com/moisespsena-go/task"
 	"github.com/spf13/cobra"
 
-	"github.com/aghape/plug"
+	"github.com/ecletus/plug"
 	"github.com/moisespsena-go/httpu"
 	"github.com/moisespsena-go/xroute"
 )

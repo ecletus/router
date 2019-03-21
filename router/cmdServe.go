@@ -1,18 +1,18 @@
 package router
 
 import (
-	"github.com/aghape/aghape"
+	"github.com/ecletus/ecletus"
 	"github.com/moisespsena-go/httpu"
 
-	"github.com/aghape/router"
+	"github.com/ecletus/router"
 
-	_ "github.com/aghape/session"
+	_ "github.com/ecletus/session"
 	"github.com/moisespsena/go-default-logger"
 	"github.com/moisespsena/go-error-wrap"
 	"github.com/spf13/cobra"
 )
 
-func serveHttpCmd(r *router.Router, agp *aghape.Aghape, setupRoutes func(r *router.Router) error) *cobra.Command {
+func serveHttpCmd(r *router.Router, agp *ecletus.Ecletus, setupRoutes func(r *router.Router) error) *cobra.Command {
 	var serveCmd = &cobra.Command{
 		Use:   "serve [ADDR]",
 		Args:  cobra.MaximumNArgs(1),

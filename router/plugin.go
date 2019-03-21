@@ -1,10 +1,10 @@
 package router
 
 import (
-	"github.com/aghape/aghape"
-	"github.com/aghape/cli"
-	"github.com/aghape/plug"
-	"github.com/aghape/router"
+	"github.com/ecletus/ecletus"
+	"github.com/ecletus/cli"
+	"github.com/ecletus/plug"
+	"github.com/ecletus/router"
 	"github.com/moisespsena-go/httpu"
 	"github.com/moisespsena-go/task"
 	"github.com/moisespsena-go/xroute"
@@ -29,7 +29,7 @@ func (p *Plugin) RequireOptions() []string {
 
 func (p *Plugin) Init(options *plug.Options) error {
 	var cfg httpu.Config
-	configDir := options.GetInterface(p.ConfigDirKey).(*aghape.ConfigDir)
+	configDir := options.GetInterface(p.ConfigDirKey).(*ecletus.ConfigDir)
 	if err := configDir.Load(&cfg, "router.yaml"); err != nil {
 		return errwrap.Wrap(err, "Load config file router.yaml")
 	}
@@ -64,7 +64,7 @@ func (p *ServerPlugin) OnRegister(dis plug.PluginEventDispatcherInterface) {
 			})
 		}
 		rootCmd := e.(*cli.RegisterEvent).RootCmd
-		agp := e.Options().GetInterface(aghape.AGHAPE).(*aghape.Aghape)
+		agp := e.Options().GetInterface(ecletus.AGHAPE).(*ecletus.Ecletus)
 		rootCmd.AddCommand(serveHttpCmd(r, agp, func(r *router.Router) error {
 			return router.Trigger(dis, r)
 		}))
