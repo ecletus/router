@@ -34,8 +34,8 @@ func (p *Plugin) Init(options *plug.Options) error {
 		return errwrap.Wrap(err, "Load config file router.yaml")
 	}
 
-	if len(cfg.Servers) == 0 {
-		cfg.Servers = append(cfg.Servers, httpu.ServerConfig{Addr: ":5000"})
+	if len(cfg.Listeners) == 0 {
+		cfg.Listeners = append(cfg.Listeners, httpu.ListenerConfig{Addr: ":5000"})
 	}
 
 	r := &router.Router{

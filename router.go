@@ -26,6 +26,7 @@ type Router struct {
 	preServeCallbacks []func(r *Router, ta task.Appender)
 	Tasks             task.Tasks
 	Cmd               *cobra.Command
+	server            *httpu.Server
 }
 
 func (r *Router) GetRootMux() *xroute.Mux {
@@ -53,17 +54,19 @@ func (r *Router) CallPreServe(ta task.Appender) {
 	}
 }
 
-func (r *Router) CreateServer() *httpu.Server {
-	srv := httpu.NewServer(r.Config, r)
-	srv.AddSetup(func(ta task.Appender) error {
-		r.CallPreServe(ta)
-		return nil
-	})
-	return srv
+func (r *Router) Server() *httpu.Server {
+	if r.server == nil {
+		srv := httpu.NewServer(r.Config, r)
+		srv.PreSetup(func(ta task.Appender) error {
+			r.CallPreServe(ta)
+			return nil
+		})
+		r.server = srv
+	}
+	return r.server
 }
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	req = xroute.SetOriginalURLIfNotSetted(req)
 	r.Handler.ServeHTTP(w, req)
 }
 

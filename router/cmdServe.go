@@ -7,8 +7,8 @@ import (
 	"github.com/ecletus/router"
 
 	_ "github.com/ecletus/session"
-	"github.com/moisespsena/go-default-logger"
-	"github.com/moisespsena/go-error-wrap"
+	defaultlogger "github.com/moisespsena-go/default-logger"
+	errwrap "github.com/moisespsena-go/error-wrap"
 	"github.com/spf13/cobra"
 )
 
@@ -24,17 +24,17 @@ func serveHttpCmd(r *router.Router, agp *ecletus.Ecletus, setupRoutes func(r *ro
 				return errwrap.Wrap(err, "Setup Routes")
 			}
 
-			var serverConfigs []httpu.ServerConfig
+			var listeners []httpu.ListenerConfig
 			for _, arg := range args {
-				serverConfigs = append(serverConfigs, httpu.ServerConfig{Addr: httpu.Addr(arg)})
+				listeners = append(listeners, httpu.ListenerConfig{Addr: httpu.Addr(arg)})
 			}
 
-			if len(serverConfigs) > 0 {
-				r.Config.Servers = serverConfigs
+			if len(listeners) > 0 {
+				r.Config.Listeners = listeners
 			}
 
 			r.Cmd = cmd
-			agp.AddTask(r.CreateServer())
+			agp.AddTask(r.Server())
 			return nil
 		},
 	}
