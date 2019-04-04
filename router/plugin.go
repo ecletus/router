@@ -9,7 +9,7 @@ import (
 	"github.com/moisespsena-go/task"
 	"github.com/moisespsena-go/xroute"
 	"github.com/moisespsena-go/error-wrap"
-	"github.com/moisespsena/go-pluggable"
+	"github.com/moisespsena-go/pluggable"
 )
 
 type Plugin struct {
