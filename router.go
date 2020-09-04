@@ -18,47 +18,50 @@ type RouterEvent struct {
 	Router *Router
 }
 
-type Router struct {
-	rootMux           *xroute.Mux
-	Mux               *xroute.Mux
-	Handler           http.Handler
-	Config            *httpu.Config
-	preServeCallbacks []func(r *Router, ta task.Appender)
-	Tasks             task.Tasks
-	Cmd               *cobra.Command
-	server            *httpu.Server
+type RouteCallback func(r *Router)
+type RouteCallbacks []RouteCallback
+
+func (this *RouteCallbacks) Append(cb ...RouteCallback) *RouteCallbacks {
+	*this = append(*this, cb...)
+	return this
 }
 
-func (r *Router) GetRootMux() *xroute.Mux {
-	if r.rootMux != nil {
-		return r.rootMux
-	}
+func (this RouteCallbacks) AppendCopy(cb ...RouteCallback) RouteCallbacks {
+	return append(this, cb...)
+}
+
+type Router struct {
+	Mux                *xroute.Mux
+	PrioritaryHandlers httpu.FallbackHandlers
+	PrefixHandlers     httpu.PrefixHandlers
+	Handler            http.Handler
+	Config             *httpu.Config
+	preServeCallbacks  []func(srv *httpu.Server)
+	Tasks              task.Tasks
+	Cmd                *cobra.Command
+	server             *httpu.Server
+	RouteCallbacks     RouteCallbacks
+}
+
+func (r *Router) GetMux() *xroute.Mux {
 	return r.Mux
 }
 
-func (r *Router) RootMux(f func(mux *xroute.Mux)) {
-	if r.rootMux == nil {
-		r.rootMux = xroute.NewMux(PREFIX + ":root")
-		r.rootMux.Mount("/", r.Mux)
-	}
-	f(r.rootMux)
-}
-
-func (r *Router) PreServe(cb ...func(r *Router, ta task.Appender)) {
+func (r *Router) PreServe(cb ...func(srv *httpu.Server)) {
 	r.preServeCallbacks = append(r.preServeCallbacks, cb...)
 }
 
-func (r *Router) CallPreServe(ta task.Appender) {
+func (r *Router) CallPreServe(srv *httpu.Server) {
 	for _, cb := range r.preServeCallbacks {
-		cb(r, ta)
+		cb(srv)
 	}
 }
 
 func (r *Router) Server() *httpu.Server {
 	if r.server == nil {
 		srv := httpu.NewServer(r.Config, r)
-		srv.PreSetup(func(ta task.Appender) error {
-			r.CallPreServe(ta)
+		srv.PreSetup(func(srv *httpu.Server) error {
+			r.CallPreServe(srv)
 			return nil
 		})
 		r.server = srv
@@ -67,7 +70,7 @@ func (r *Router) Server() *httpu.Server {
 }
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	r.Handler.ServeHTTP(w, req)
+	httpu.Fallback(r.PrioritaryHandlers, r.PrefixHandlers, r.Handler).ServeHTTP(w, req)
 }
 
 func RouterEventCallback(cb func(e *RouterEvent)) func(e plug.EventInterface) {
@@ -82,12 +85,9 @@ func RouterEventCallbackE(cb func(e *RouterEvent) error) func(e plug.EventInterf
 	}
 }
 
-func OnRoute(dis plug.EventDispatcherInterface, callbacks ...func(e *RouterEvent)) (err error) {
+func OnRoute(dis plug.EventDispatcherInterface, callbacks ...func(e *RouterEvent)) {
 	for _, cb := range callbacks {
-		err = dis.OnE(E_ROUTE, RouterEventCallback(cb))
-		if err != nil {
-			return
-		}
+		dis.On(E_ROUTE, RouterEventCallback(cb))
 	}
 	return
 }

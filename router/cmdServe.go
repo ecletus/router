@@ -18,7 +18,7 @@ func serveHttpCmd(r *router.Router, agp *ecletus.Ecletus, setupRoutes func(r *ro
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Init server.",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			var log = defaultlogger.NewLogger(router.PREFIX + ":server")
+			var log = defaultlogger.GetOrCreateLogger(router.PREFIX + ":server")
 			log.Debug("Setup routes")
 			if err = setupRoutes(r); err != nil {
 				return errwrap.Wrap(err, "Setup Routes")
